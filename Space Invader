@@ -1,0 +1,673 @@
+# Mathis Tolnaes
+# Student ID: 20314330
+# Email: mathistolnaes@gmail.com
+# Edited: 12:33 11/24
+# Last digit of student ID = 0, Harry Potter Theme
+# Comments: 
+
+
+"""
+    Turtle Graphics - Shooting Game
+"""
+
+import turtle
+import pygame
+import random
+
+"""
+    Constants and variables
+"""
+
+# Initializing sound files
+pygame.init()
+pygame.mixer.init(buffer=16)
+laser_sound = pygame.mixer.Sound("Lasershoot.wav")
+dying_sound = pygame.mixer.Sound("Dying.wav")
+victory_sound = pygame.mixer.Sound("Cheering.wav")
+losegame_sound = pygame.mixer.Sound("Losegame.wav")
+
+# General parameters
+window_height = 600
+window_width = 600
+window_margin = 50
+update_interval = 25    # The screen update interval in ms, which is the
+                        # interval of running the updatescreen function
+
+# Player's parameters
+player_size = 50        # The size of the player image plus margin
+player_init_x = 0
+player_init_y = -window_height / 2 + window_margin
+player_speed = 10       # The speed the player moves left or right
+
+# Enemy's parameters
+enemy_number = 2        # The number of enemies in the game
+
+enemy_size = 50         # The size of the enemy image plus margin
+enemy_init_x = -window_width / 2 + window_margin
+enemy_init_y = window_height / 2 - window_margin
+enemy_min_x = enemy_init_x
+enemy_max_x = window_width / 2 - enemy_size * enemy_number
+    # The maximum x coordinate of the first enemy, which will be used
+    # to restrict the x coordinates of all other enemies
+enemy_hit_player_distance = 30
+    # The player will lose the game if the vertical
+    # distance between the enemy and the player is smaller
+    # than this value
+
+# Enemy movement parameters
+enemy_speed = 2
+enemy_speed_increment = 1
+    # The increase in speed every time the enemies move
+    # across the window and back
+enemy_direction = 1
+    # The current direction the enemies are moving:
+    #     1 means from left to right and
+    #     -1 means from right to left
+
+# The list of enemies
+enemies = []
+
+# The list of bullets
+bulletlist = []
+
+# Laser parameter
+laser_width = 2
+laser_height = 15
+laser_speed = 20
+laser_hit_enemy_distance = 20
+    # The laser will destory an enemy if the distance
+    # between the laser and the enemy is smaller than
+    # this value
+
+# Bullet parameter
+bullet_width = 2
+bullet_height = 15
+bullet_speed = 8
+bullet_hit_player_distance = 20
+
+# Shoot interval
+bullet_interval = 1000
+
+# Make cheat key
+paused = False
+
+"""
+    Handle the player movement
+"""
+
+
+def cheat():
+    global paused
+    # Pause the game
+    if paused == False:
+        paused = True
+    elif paused == True:
+        paused = False
+
+    if paused == True:
+        for enemy in enemies:
+            enemy.onclick(kill)
+            
+
+
+def kill(x,y):
+    if paused == True:
+        for i in range(len(enemies)):
+            if enemies[i].isvisible() and enemies[i].distance(x,y) < laser_hit_enemy_distance:
+                enemies[i].hideturtle()
+
+
+def decrease_enemy_number(x, y):
+    # Declare enemy_number as global
+    global enemy_number, enemy_max_x
+    if enemy_number > 1 :
+        # decrease number of enemies by 1
+        enemy_number = enemy_number - 1
+        
+        # tell the turtle 'enemy_number_text' to clear what it has written
+        enemy_number_text.clear()
+        
+        # tell the turtle 'enemy_number_text' to display the new value
+        enemy_number_text.write(str(enemy_number), font=("System", 12, "bold"), align="center")
+
+        if enemy_number >= 6:
+            enemy_max_x = window_width / 2 - enemy_size * 6
+        else:
+            enemy_max_x = window_width / 2 - enemy_size * enemy_number
+
+
+def increase_enemy_number(x, y):
+    # Declare enemy_number as global
+    global enemy_number, enemy_max_x
+    if enemy_number < 48 :
+        # increase number of enemies by 1
+        enemy_number = enemy_number + 1
+        
+        # tell the turtle 'enemy_number_text' to clear what it has written
+        enemy_number_text.clear()
+        
+        # tell the turtle 'enemy_number_text' to display the new value
+        enemy_number_text.write(str(enemy_number), font=("System", 12, "bold"), align="center")
+
+        if enemy_number >= 6:
+            enemy_max_x = window_width / 2 - enemy_size * 6
+        else:
+            enemy_max_x = window_width / 2 - enemy_size * enemy_number
+
+# This function is run when the "Left" key is pressed. The function moves the
+# player to the left when the player is within the window area
+def playermoveleft():
+
+    # Get current player position
+    x, y = player.position()
+
+    # Part 2.2 - Keeping the player inside the window
+    # Player should only be moved only if it is within the window range
+
+    # Restrict left movement
+    
+    if x - player_speed > -window_width / 2 + window_margin:
+        player.goto(x - player_speed, y)
+   
+
+    #turtle.update() # delete this line after finishing updatescreen()
+
+# This function is run when the "Right" key is pressed. The function moves the
+# player to the right when the player is within the window area
+def playermoveright():
+
+    # Get current player position
+
+    x, y = player.position()
+
+    # Part 2.2 - Keeping the player inside the window
+    # Player should only be moved only if it is within the window range
+    
+    # Restrict right movement
+    
+    if x + player_speed < window_width / 2 - window_margin:
+        player.goto(x + player_speed, y)
+    
+
+    #turtle.update() # delete this line after finishing updatescreen()
+
+
+def less_interval():
+    global bullet_interval
+    global value
+    if bullet_interval > 200:
+        value.clear()
+        bullet_interval = bullet_interval - 100
+        value.write(bullet_interval, font=("System", 16, "bold"), align="center")
+
+def more_interval():
+    global bullet_interval
+    global value
+    if bullet_interval < 1000:
+        value.clear()
+        bullet_interval = bullet_interval + 100
+        value.write(bullet_interval, font=("System", 16, "bold"), align="center")
+
+"""
+    Handle the screen update and enemy movement
+"""
+
+# This function is run in a fixed interval. It updates the position of all
+# elements on the screen, including the player and the enemies. It also checks
+# for the end of game conditions.
+def updatescreen():
+    # Use the global variables here because we will change them inside this
+    # function
+    global enemy_direction
+    global enemy_speed
+    global bullet
+    global bullet_interval
+    global paused
+
+    # Move the enemies depending on the moving direction
+
+    # The enemies can only move within an area, which is determined by the
+    # position of enemy at the top left corner, enemy_min_x and enemy_max_x
+
+    # x and y displacements for all enemies
+    dx = enemy_speed * enemy_direction
+    dy = 0
+
+    # Part 3.3
+    # Perform several actions if the enemies hit the window border
+    x0 = enemies[0].xcor()
+    if x0 + dx > enemy_max_x or x0 + dx < enemy_min_x:
+        
+        # Switch the moving direction
+        enemy_direction = -enemy_direction
+
+        # Bring the enemies closer to the player
+        dy = -enemy_size / 2
+
+        # Increase the speed when the direction switches to right again
+        if enemy_direction == 1:
+            enemy_speed = enemy_speed + enemy_speed_increment
+        
+
+    # Move the enemies according to the dx and dy values determined above
+    for enemy in enemies:
+        if paused == False:
+            x, y = enemy.position()
+            enemy.goto(x + dx, y + dy)
+
+            # Add extra image of enemy
+            if (x // 20) % 2 == 0:
+                enemy.shape("Dementor.gif")
+            else:
+                enemy.shape("Dementor2.gif")
+        
+
+    # Part 4.3 - Moving the laser
+    # Perform several actions if the laser is visible
+
+    if laser.isvisible():
+        # Move the laser
+        laser.forward(laser_speed)
+
+        # Hide the laser if it goes beyond the window
+        if laser.ycor() > window_height / 2:
+            # Hide the laser turtle
+            laser.hideturtle()
+
+        # Check the laser against every enemy using a for loop
+        for enemy in enemies:
+            # If the laser hits a visible enemy, hide both of them
+            if enemy.isvisible(): #and
+                if laser.distance(enemy) < laser_hit_enemy_distance:
+                    dying_sound.play()
+                    laser.hideturtle()
+                    enemy.hideturtle()
+
+                    # Stop if some enemy is hit
+                    break
+
+    for bullet in bulletlist:
+        if paused == False:
+            
+            # Move the bullet
+            bullet.forward(bullet_speed)
+            # Remove the bullet if it goes beyond the window  
+            if bullet.ycor() < -window_height / 2:
+                # Hide the bullet turtle
+                bullet.hideturtle()
+                bulletlist.remove(bullet)
+
+            for bullet in bulletlist:
+                if bullet.distance(player) < bullet_hit_player_distance:
+                    losegame_sound.play()
+                    gameover("You lose!")
+
+                    return
+
+    # Part 5.1 - Gameover when one of the enemies is close to the player
+
+    # If one of the enemies is very close to the player, the game will be over
+    for enemy in enemies:
+        if enemy.ycor()-player.ycor() < enemy_hit_player_distance:
+            # Show a message
+            losegame_sound.play()
+            gameover("You lose!")
+
+            # Return and do not run updatescreen() again
+            return
+
+    # Part 5.2 - Gameover when you have killed all enemies
+
+    # Set up a variable as a counter
+    number_living_enemies = 0
+
+    # For each enemy
+    for enemy in enemies:     
+        # Increase the counter if the enemy is visible
+        if enemy.isvisible():
+            number_living_enemies = number_living_enemies + 1
+
+    # If the counter is 0, that means you have killed all enemies
+    if number_living_enemies == 0:
+        # Perform several gameover actions
+        victory_sound.play()
+        gameover("You win!")
+
+        # Return and do not run updatescreen() again
+        return
+    
+        
+    # Part 3.2 - Controlling animation using the timer event
+    # Update the screen
+    turtle.update()
+    
+    # Start the game by running updatescreen()
+    turtle.ontimer(updatescreen, update_interval)
+
+    
+
+"""
+    Shoot the laser and bullet
+"""
+
+# This function is run when the player presses the spacebar. It shoots a laser
+# by putting the laser in the player's current position. Only one laser can
+# be shot at any one time.
+def shoot():
+
+    #print("Pyoo!") # delete this line after completing the function
+    turtle.addshape("Laserbeam.gif")
+    laser.shape("Laserbeam.gif")
+    
+    # Part 4.2 - the shooting function
+    # Shoot the laser only if it is not visible
+    # When the laser is available
+    if not laser.isvisible():
+        laser_sound.play()
+        # Make the laser to become visible
+        laser.showturtle()
+        
+        # Move the laser to the position of the player
+        x, y = player.position()
+        laser.goto(x, y)
+
+def dementorshoot():
+
+    global bulletlist
+    global bullet
+    global bullet_interval
+    global random
+    
+    if paused == False:
+        turtle.addshape("Bullet.gif")
+        
+        shoot_enemy = enemies [random.randint(0, len(enemies)-1)]
+
+        while not shoot_enemy.isvisible():
+            shoot_enemy = enemies [random.randint(0, len(enemies)-1)]
+        
+        
+        ### Bullet turtle ###
+
+        # Create the laser turtle using the square turtle shape
+        bullet = turtle.Turtle()
+        bullet.color("Black")
+        bullet.shape("Bullet.gif")
+
+        # Change the size of the turtle and change the orientation of the turtle
+        bullet.shapesize(bullet_width / 20, bullet_height / 20)
+        bullet.right(90)
+        bullet.up()
+
+        # Hide the laser turtle
+        # bullet.hideturtle()
+
+        # Move the laser to the position of the player
+        x, y = shoot_enemy.position()
+        bullet.goto(x, y)
+
+        bulletlist.append(bullet)
+    
+    turtle.ontimer(dementorshoot, bullet_interval)
+
+        
+    
+
+"""
+    Game start
+"""
+# This function contains things that have to be done when the game starts.
+def gamestart(x, y):
+    # Use the global variables here because we will change them inside this
+    # function
+    global player
+    global laser
+    global bullet
+    global bullet_interval
+    global value
+
+    ### Player turtle ###
+    # Hide start_button 
+    start_button.clear()
+    start_button.hideturtle()
+
+    
+    # Hide other turtles
+    # For texts
+    enemy_number_text.clear()
+    labels.clear()
+    headline.clear()
+    guidelines.clear()
+
+    # For turtles
+    left_arrow.hideturtle()
+    right_arrow.hideturtle()
+
+    # Shoot interval text
+    interval = turtle.Turtle()
+    interval.hideturtle()
+    interval.pencolor("Black")
+    interval.up()
+    interval.goto(200, 280)
+    interval.write("Shoot interval:", font=("System", 16, "bold"), align="center")
+
+    # Interval value turtle
+    value = turtle.Turtle()
+    value.hideturtle()
+    value.pencolor("Black")
+    value.up()
+    value.goto(270, 280)
+    value.write(bullet_interval, font=("System", 16, "bold"), align="center")
+
+
+    # Add the spaceship picture
+    turtle.addshape("Potter.gif")
+
+    # Create the player turtle and move it to the initial position
+    player = turtle.Turtle()
+    player.shape("Potter.gif")
+    player.up()
+    player.goto(player_init_x, player_init_y)
+
+
+     
+    turtle.onkeypress(less_interval, ",")
+    turtle.onkeypress(more_interval, ".")
+            
+
+    # Part 2.1
+    # Map player movement handlers to key press events
+    
+    turtle.onkeypress(playermoveleft, "Left")
+    turtle.onkeypress(playermoveright, "Right")
+    turtle.listen()
+    
+    ### Enemy turtles ###
+
+    # Add the enemy picture
+    turtle.addshape("Dementor.gif")
+    turtle.addshape("Dementor2.gif")
+
+    for i in range(enemy_number):
+        # Create the turtle for the enemy
+        enemy = turtle.Turtle()
+        enemy.shape("Dementor.gif")
+        enemy.up()
+
+        # Move to a proper position counting from the top left corner
+        enemy.goto(enemy_init_x + enemy_size * (i % 6), enemy_init_y - enemy_size * (i // 6))
+
+        # Add the enemy to the end of the enemies list
+        enemies.append(enemy)
+
+    ### Laser turtle ###
+
+    # Create the laser turtle using the square turtle shape
+    laser = turtle.Turtle()
+    laser.shape("square")
+    laser.color("Black")
+
+    # Change the size of the turtle and change the orientation of the turtle
+    laser.shapesize(laser_width / 20, laser_height / 20)
+    laser.left(90)
+    laser.up()
+
+    # Hide the laser turtle
+    laser.hideturtle()
+
+    # Part 4.2 - Mapping the shooting function to key press event
+    turtle.onkeypress(shoot, "space")
+    
+
+    # Part 3.2 - Controlling animation using the timer event
+    turtle.update()
+
+    
+
+    # Part 4.2 - Mapping the shooting function to key press event
+    turtle.ontimer(dementorshoot, 1000)
+
+    # Part 3.2 - Controlling animation using the timer event
+    turtle.update()
+ 
+    # Start the game by running updatescreen()
+    turtle.ontimer(updatescreen, update_interval)
+
+
+"""
+    Game over
+"""
+
+# This function shows the game over message.
+def gameover(message):
+
+    # Part 5.3 - Improving the gameover() function
+
+    #print(message) # delete this line after completing the function
+
+    # Create new turtle
+    screenmessage = turtle.Turtle()
+    screenmessage.hideturtle()
+    screenmessage.pencolor("Black")
+    
+    # Use turtle.write() to display message on the turtle graphics window
+    screenmessage.write(message, align="center", font=("System", 30, "bold"))
+    
+    # Run turtle.update
+    turtle.update()
+
+"""
+    Set up main Turtle parameters
+"""
+
+# Set up the turtle window
+turtle.bgpic("Background.gif")
+turtle.setup(window_width, window_height)
+turtle.bgcolor("White")
+turtle.up()
+turtle.hideturtle()
+turtle.tracer(False)
+
+# Start the game
+start_button = turtle.Turtle()
+start_button.onclick(gamestart)
+
+# Set up the start_button
+start_button.up()
+start_button.goto(-40, -40)
+start_button.color("White", "Black")
+start_button.begin_fill()
+for _ in range(2):
+    start_button.forward(80)
+    start_button.left(90)
+    start_button.forward(25)
+    start_button.left(90)
+start_button.end_fill()
+
+start_button.color("White")
+start_button.goto(0, -35)
+start_button.write("Start", font=("System", 12, "bold"), align="center")
+
+# Create a transparent and clickable layer on top of button
+# We have just created 
+start_button.goto(0, -28)
+
+# Change start_button to a square
+start_button.shape("square")
+
+# Resize start_button to fit the button
+start_button.shapesize(1.25, 4)
+
+# Make start_button transparent
+start_button.color("")
+
+# Make headline
+headline = turtle.Turtle()
+headline.hideturtle()
+headline.pencolor("Black")
+headline.up()
+headline.goto(0, 220)
+headline.write("The Evil Dementors", font=("System", 30, "bold"), align="center")
+
+# Make guidelines
+guidelines = turtle.Turtle()
+guidelines.hideturtle()
+guidelines.pencolor("Black")
+guidelines.up()
+guidelines.goto(0, -240)
+guidelines.write("Control Harry Potter using the arrow keys", font=("System", 12, "bold"), align="center")
+guidelines.up()
+guidelines.goto(0, -260)
+guidelines.write("and use spacebar to kill the dementors!", font=("System", 12, "bold"), align="center")
+
+# Set up other controls
+# Create a turtle for displaying the text
+labels = turtle.Turtle()
+labels.hideturtle()
+labels.pencolor("Black")
+labels.up()
+labels.goto(-100, 0) # Put the text next to the spinner control
+labels.write("Number of Enemies:", font=("System", 12, "bold"))
+
+# Create a turtle for displaying the # of enemies
+enemy_number_text = turtle.Turtle()
+enemy_number_text.hideturtle()
+enemy_number_text.pencolor("Black")
+enemy_number_text.up()
+enemy_number_text.goto(80, 0)
+enemy_number_text.write(str(enemy_number), font=("System", 12, "bold"), align="center")
+
+# Create a turtle for the left arrow, to decrease # of enemies
+left_arrow = turtle.Turtle()
+left_arrow.shape("arrow")
+left_arrow.color("Black")
+left_arrow.shapesize(0.5, 1)
+left_arrow.left(180)
+left_arrow.up()
+left_arrow.goto(60,8)
+
+# Create a turtle for the right arrow, to increase # of enemies
+right_arrow = turtle.Turtle()
+right_arrow.shape("arrow")
+right_arrow.color("Black")
+right_arrow.shapesize(0.5, 1)
+right_arrow.up()
+right_arrow.goto(100,8)
+
+# Make left_arrow clickable
+left_arrow.onclick(decrease_enemy_number)
+
+# Make right_arrow clickable
+right_arrow.onclick(increase_enemy_number)
+
+
+# Make the cheat key
+turtle.onkeypress(cheat, "s")
+
+
+turtle.update()
+
+#gamestart()
+
+# Switch focus to turtle graphics window
+turtle.done()
