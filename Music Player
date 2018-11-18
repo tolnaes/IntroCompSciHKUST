@@ -1,0 +1,266 @@
+# COMP1021 Assignment 1
+# Mathis Tolnaes, Student ID: 20314330
+# Email: mathistolnaes@gmail.com
+# Other comments:
+
+import pygame.midi  # Import the midi module for playing music
+import time         # Import the time module for the time.sleep function   
+    
+        
+
+##### Initialize the modules
+
+# Initialize the MIDI (playing music) module
+pygame.midi.init()
+
+# Create an output to play music
+output = pygame.midi.Output(pygame.midi.get_default_output_id())
+
+
+# Initialize the music list
+music = []
+ 
+
+print("Welcome to the Python music player!")
+
+# The following while loop shows the menu options
+# to the user, gets the response from the user,
+# and does the appropriate action
+
+# Initialize the option to empty so we can
+# do the while loop the first time
+option = " "
+
+while option != "q": # While the option is not "q"
+    print()
+    print("Please choose one of the following options:")
+    print()
+    print("l - Load a music file")
+    print("p - Play the music")
+    print("i - Change the musical instrument")
+    print("t - Transpose the music")
+    print("s - Adjust the speed of the music")
+    print("d - Display the music")
+    print("x - Print the music")
+    print("r - Reverse the music")
+    print("q - Quit the program")
+    print()
+
+    option = input("Please input your option: ")
+
+    """
+    The following code loads the music information
+    into the event data structure.
+    You aren't expected to understand exactly how it
+    works, so don't worry about it!
+    """
+    ##### Handle the load option
+    if option == "l":
+        print()
+
+        # Ask the user for the music file
+        musicfile = input("Please give me a music file: ")
+
+        # Open the file for reading
+        f = open(musicfile, "r")
+
+        # Read the data into the music list
+        music = []
+        for line in f:
+            # Read each line as a music event
+            event = line.rstrip().split("\t")
+
+            # Convert the data to the right data type
+            event[0] = float(event[0])  # Time
+            event[1] = int(event[1])    # Pitch
+            event[2] = str(event[2])    # On/Off
+            if event[2] == "on":
+                event[3] = int(event[3])    # Instrument
+
+            # Add the event at the end of the music
+            music.append(event)
+
+        # Close the file
+        f.close()
+    """
+    End of the scary code
+    """
+
+    ##### Handle the play option
+    if option == "p":
+        print()
+        
+                
+                   
+        # Create the music data as a list of lists
+        
+        
+        # Play the notes using a for loop
+        for i in range(len(music)):
+            event = music[i]
+            
+                # Send the message
+            if event[2] == "on":
+                output.set_instrument(event[3])
+                output.note_on(event[1], 127)
+            else:
+                output.note_off(event[1], 127)
+
+                # Wait for the next event
+            if i + 1 < len(music):
+                next_event = music[i + 1]
+                time.sleep(next_event[0] - event[0])
+
+        time.sleep(1)
+
+        
+
+
+    ##### Handle the instrument option
+    if option == "i":
+        print()
+        
+
+
+    ##### Handle the transpose option
+    if option == "t":
+        print()
+        transpose = int(input("Please enter the amount of transposition: "))
+
+        for event in music:
+        # Change the pitch value
+            event[1] = event[1] + transpose
+
+        if event[1] > 127:
+            event[1] == 127
+        if event[1] < 0:
+            event[1] == 0
+            
+    ##### Handle the speed option
+    if option == "s":
+        print()
+        speed = int(input("Please enter the adjusted speed: "))
+
+        for event in music:
+            event[0] = event[0]/ (speed/100)
+
+
+    ##### Handle the music display option
+    if option == "d":
+        def displaymusic():
+            import turtle
+            turtle.tracer(False)    # Disable any turtle animation
+
+            duration = music[-1][0]
+            max_pitch = music[0][1]
+            min_pitch = music[0][1]
+                
+            for i in range(len(music)):           
+                if (music[i][1] > max_pitch):
+                        max_pitch = music[i][1]
+                elif (music[i][1] < min_pitch):
+                        min_pitch = music[i][1]
+                       
+            turtle.mode("world")    # Use a customized coordinate system
+            turtle.setworldcoordinates(0, min_pitch-2, duration, max_pitch+2)
+
+            turtle.up()
+            for event in music:
+                if event[2] == "on":
+                        
+                # Draw the dot
+                    turtle.goto(event[0], event[1])
+                    turtle.dot(5)
+
+            turtle.hideturtle() # Do not display the turtle
+            turtle.update()    
+            turtle.done()
+            
+        print("Please switch to the turtle window to see the music display.")
+        displaymusic()
+        
+
+
+    ##### Handle the print music option
+    if option == "x":
+        instruments_list = [
+    "acoustic grand piano", "bright acoustic piano", "electric grand piano",
+    "honky-tonk piano", "electric piano 1", "electric piano 2", "harpsichord",
+    "clavinet", "celesta", "glockenspiel", "music box", "vibraphone",
+    "marimba", "xylophone", "tubular bells", "dulcimer", "drawbar organ",
+    "percussive organ", "rock organ", "church organ", "reed organ",
+    "accordion", "harmonica", "tango accordion", "acoustic guitar (nylon)",
+    "acoustic guitar (steel)", "electric guitar (jazz)",
+    "electric guitar (clean)", "electric guitar (muted)", "overdriven guitar",
+    "distortion guitar", "guitar harmonics", "acoustic bass",
+    "electric bass (finger)", "electric bass (pick)", "fretless bass",
+    "slap bass 1", "slap bass 2", "synth bass 1", "synth bass 2", "violin",
+    "viola", "cello", "contrabass", "tremolo strings", "pizzicato strings",
+    "orchestral harp", "timpani", "string ensemble 1", "string ensemble 2",
+    "synth strings 1", "synth strings 2", "choir aahs", "voice oohs",
+    "synth choir", "orchestra hit", "trumpet", "trombone", "tuba",
+    "muted trumpet", "french horn", "brass section", "synth brass 1",
+    "synth brass 2", "soprano sax", "alto sax", "tenor sax", "baritone sax",
+    "oboe", "english horn", "bassoon", "clarinet", "piccolo", "flute",
+    "recorder", "pan flute", "blown bottle", "shakuhachi", "whistle",
+    "ocarina", "lead 1 (square)", "lead 2 (sawtooth)", "lead 3 (calliope)",
+    "lead 4 (chiff)", "lead 5 (charang)", "lead 6 (voice)", "lead 7 (fifths)",
+    "lead 8 (bass + lead)", "pad 1 (new age)", "pad 2 (warm)",
+    "pad 3 (polysynth)", "pad 4 (choir)", "pad 5 (bowed)", "pad 6 (metallic)",
+    "pad 7 (halo)", "pad 8 (sweep)", "fx 1 (rain)", "fx 2 (soundtrack)",
+    "fx 3 (crystal)", "fx 4 (atmosphere)", "fx 5 (brightness)",
+    "fx 6 (goblins)", "fx 7 (echoes)", "fx 8 (sci-fi)", "sitar", "banjo",
+    "shamisen", "koto", "kalimba", "bagpipe", "fiddle", "shanai",
+    "tinkle bell", "agogo", "steel drums", "woodblock", "taiko drum",
+    "melodic tom", "synth drum", "reverse cymbal", "guitar fret noise",
+    "breath noise", "seashore", "bird tweet", "telephone ring", "helicopter",
+    "applause", "gunshot"]
+
+        for i in range(len(music)):
+
+            if music[i][2] == "on":
+                print(str(music[i][0])+":", str(music[i][1]), str(music[i][2]), "("+str(instruments_list[music[i][3]])+")")
+            elif music[i][2] == "off":
+                print(str(music[i][0])+":", str(music[i][1]), str(music[i][2]))
+                    
+        
+                  
+        
+                
+
+    ##### Handle the reverse music option
+    if option == "r":
+
+        music = music[ : :-1]
+        revduration = 0
+
+        for i in range(len(music)-1):
+            revduration1 = music[i][0]
+            revduration2 = music[i+1][0]
+            music[i][0] = revduration
+            revduration = revduration + (revduration1 - revduration2)
+
+        music[(len(music)-1)][0] = revduration
+
+        for i in range(len(music)):
+            if music[i][2] == "on":
+                music[i][2] = "off"
+            elif music[i][2] == "off":
+                music[i][2] = "on"
+
+        for i in range(len(music)):
+            revmusic1 = music[i]
+            if revmusic1[2] == "on":
+                for j in range(i + 1, len(music)):
+                    revmusic2 = music[j]
+                    if revmusic2[1] == revmusic1[1] and revmusic2[2] == "off":
+                        revmusic1.append(revmusic2[3])
+                        break
+            
+
+
+# Close the music output
+output.close()
+
+# Close the MIDI module
+pygame.midi.quit()
